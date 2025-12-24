@@ -14,14 +14,6 @@ class QueryRequest(BaseModel):
     template_type: str = Field(default="default", description="Template type: default, detailed, concise")
     filter_filenames: Optional[List[str]] = Field(default=None, description="Optional list of filenames to search within. Leave empty to search all documents.")
     
-    class Config:
-        schema_extra = {
-            "example": {
-                "query": "What is the main topic?",
-                "top_k": 3,
-                "template_type": "default"
-            }
-        }
 
 @app.post("/upload-pdf")
 async def upload_pdf(file: UploadFile = File(...)):
