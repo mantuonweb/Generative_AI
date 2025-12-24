@@ -1,0 +1,29 @@
+__pycache__/
+*.py[cod]
+.venv/
+.env
+*.log
+
+# RAG/ML specific
+*.pkl               # Pickle files (saved models)
+*.h5                # Keras models
+*.pt                # PyTorch models
+*.pth               # PyTorch checkpoints
+*.onnx              # ONNX models
+*.faiss             # FAISS index files
+vector_store/       # Vector database directory
+embeddings/         # Cached embeddings
+models/             # Downloaded models
+
+# Data files
+data/
+uploads/
+*.pdf               # If you don't want to commit PDFs
+*.csv
+*.json              # Unless it's config
+
+# API keys and secrets
+.env
+.env.local
+config.ini
+secrets.json
