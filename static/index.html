@@ -1,0 +1,387 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RAG Search</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+            padding: 30px;
+        }
+
+        h1 {
+            color: #667eea;
+            margin-bottom: 30px;
+            text-align: center;
+        }
+
+        .search-box {
+            margin-bottom: 30px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: #333;
+        }
+
+        textarea {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 1em;
+            resize: vertical;
+            min-height: 100px;
+            font-family: inherit;
+        }
+
+        textarea:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .options {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+
+        select {
+            width: 100%;
+            padding: 10px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 1em;
+        }
+
+        select:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .btn {
+            width: 100%;
+            padding: 14px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 1.1em;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.2s;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+        }
+
+        .btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .loading {
+            display: none;
+            text-align: center;
+            padding: 20px;
+        }
+
+        .loading.active {
+            display: block;
+        }
+
+        .spinner {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #667eea;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 10px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .results {
+            margin-top: 30px;
+        }
+
+        .answer {
+            background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+            border-left: 4px solid #667eea;
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 25px;
+        }
+
+        .answer h3 {
+            color: #667eea;
+            margin-bottom: 12px;
+        }
+
+        .answer-text {
+            color: #333;
+            line-height: 1.8;
+            font-size: 1.05em;
+        }
+
+        .sources h3 {
+            color: #333;
+            margin-bottom: 15px;
+        }
+
+        .source-card {
+            background: #f8f9fa;
+            border: 2px solid #e0e0e0;
+            border-radius: 10px;
+            padding: 18px;
+            margin-bottom: 15px;
+            transition: all 0.3s;
+        }
+
+        .source-card:hover {
+            border-color: #667eea;
+            box-shadow: 0 3px 10px rgba(102, 126, 234, 0.2);
+        }
+
+        .source-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 12px;
+        }
+
+        .source-title {
+            font-weight: bold;
+            color: #333;
+        }
+
+        .source-score {
+            background: #667eea;
+            color: white;
+            padding: 4px 12px;
+            border-radius: 15px;
+            font-size: 0.85em;
+        }
+
+        .source-content {
+            color: #555;
+            line-height: 1.6;
+            margin-bottom: 10px;
+        }
+
+        .source-meta {
+            font-size: 0.9em;
+            color: #888;
+        }
+
+        .alert {
+            padding: 12px 18px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+        }
+
+        .alert-error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+
+        .empty {
+            text-align: center;
+            padding: 40px;
+            color: #888;
+        }
+
+        @media (max-width: 768px) {
+            .options {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔍 RAG Search</h1>
+
+        <div id="alertContainer"></div>
+
+        <div class="search-box">
+            <label for="query">Enter your question:</label>
+            <textarea id="query" placeholder="What would you like to know?"></textarea>
+        </div>
+
+        <div class="options">
+            <div>
+                <label for="topK">Number of results:</label>
+                <select id="topK">
+                    <option value="3">3</option>
+                    <option value="5">5</option>
+                    <option value="7">7</option>
+                    <option value="10">10</option>
+                </select>
+            </div>
+            <div>
+                <label for="template">Response style:</label>
+                <select id="template">
+                    <option value="default">Default</option>
+                    <option value="detailed">Detailed</option>
+                    <option value="concise">Concise</option>
+                </select>
+            </div>
+        </div>
+
+        <button class="btn" onclick="search()" id="searchBtn">Search</button>
+
+        <div class="loading" id="loading">
+            <div class="spinner"></div>
+            <p>Searching...</p>
+        </div>
+
+        <div id="results" class="results"></div>
+    </div>
+
+    <script>
+        const API_URL = 'http://localhost:8000';
+
+        function showAlert(message) {
+            const container = document.getElementById('alertContainer');
+            const alert = document.createElement('div');
+            alert.className = 'alert alert-error';
+            alert.textContent = message;
+            container.appendChild(alert);
+            setTimeout(() => alert.remove(), 5000);
+        }
+
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        async function search() {
+            const query = document.getElementById('query').value.trim();
+            
+            if (!query) {
+                showAlert('Please enter a search query');
+                return;
+            }
+
+            const topK = parseInt(document.getElementById('topK').value);
+            const template = document.getElementById('template').value;
+            
+            const btn = document.getElementById('searchBtn');
+            const loading = document.getElementById('loading');
+            const results = document.getElementById('results');
+
+            btn.disabled = true;
+            loading.classList.add('active');
+            results.innerHTML = '';
+
+            try {
+                const response = await fetch(`${API_URL}/query`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        query: query,
+                        top_k: topK,
+                        template_type: template
+                    })
+                });
+
+                if (!response.ok) {
+                    const error = await response.json();
+                    throw new Error(error.detail || 'Search failed');
+                }
+
+                const data = await response.json();
+                displayResults(data);
+
+            } catch (error) {
+                showAlert(`Error: ${error.message}`);
+                console.error('Search error:', error);
+            } finally {
+                btn.disabled = false;
+                loading.classList.remove('active');
+            }
+        }
+
+        function displayResults(data) {
+            const container = document.getElementById('results');
+            
+            if (!data.answer && (!data.retrieved_documents || data.retrieved_documents.length === 0)) {
+                container.innerHTML = '<div class="empty">No results found</div>';
+                return;
+            }
+
+            let html = '';
+
+            // Answer section
+            if (data.answer) {
+                html += `
+                    <div class="answer">
+                        <h3>💡 Answer</h3>
+                        <div class="answer-text">${escapeHtml(data.answer)}</div>
+                    </div>
+                `;
+            }
+
+            // Sources section
+            if (data.retrieved_documents && data.retrieved_documents.length > 0) {
+                html += '<div class="sources"><h3>📄 Sources</h3>';
+                
+                data.retrieved_documents.forEach((doc, index) => {
+                    html += `
+                        <div class="source-card">
+                            <div class="source-header">
+                                <div class="source-title">${index + 1}. ${escapeHtml(doc.filename)}</div>
+                                <div class="source-score">${doc.score.toFixed(4)}</div>
+                            </div>
+                            <div class="source-content">${escapeHtml(doc.content)}</div>
+                            <div class="source-meta">Page ${doc.page_number} • Chunk ${doc.chunk_id}</div>
+                        </div>
+                    `;
+                });
+                
+                html += '</div>';
+            }
+
+            container.innerHTML = html;
+        }
+
+        // Allow Enter key to search (Ctrl+Enter for new line)
+        document.getElementById('query').addEventListener('keydown', function(e) {
+            if (e.key === 'Enter' && !e.ctrlKey && !e.shiftKey) {
+                e.preventDefault();
+                search();
+            }
+        });
+    </script>
+</body>
+</html>
