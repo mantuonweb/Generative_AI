@@ -10,6 +10,7 @@ controller = RAGController(llm_model="llama2")
 class QueryRequest(BaseModel):
     query: str = Field(..., min_length=1, max_length=1000, description="The query text")
     top_k: int = Field(default=3, ge=1, le=10, description="Number of top results to retrieve")
+    template_type: str = Field(default="default", description="Template type: default, detailed, concise")
 
 @app.post("/upload-pdf")
 async def upload_pdf(file: UploadFile = File(...)):
@@ -32,7 +33,7 @@ async def query(request: QueryRequest):
     """Query the RAG system"""
     try:
         # Delegate to controller
-        result = controller.query_documents(request.query, request.top_k)
+        result = controller.query_documents(request.query, request.top_k, request.template_type)
         return result
         
     except ValueError as e:

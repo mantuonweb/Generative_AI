@@ -5,6 +5,7 @@ from typing import List, Dict
 import os
 import faiss
 import pickle
+from utils import TemplateManager
 
 class RAGEngine:
     def __init__(self, model_name="all-MiniLM-L6-v2", llm_model="llama3.2"):
@@ -60,7 +61,12 @@ class RAGEngine:
         
         return results
     
-    def generate_answer(self, query: str, top_k: int = 3) -> Dict:
+    def create_prompt(self, query: str, context: str, template_type: str = "default") -> str:
+        """Create a prompt for the LLM from query and context"""
+        template = TemplateManager.get(template_type)
+        return template.format(context=context, query=query)
+    
+    def generate_answer(self, query: str, top_k: int = 3, template_type: str = "default") -> Dict:
         """Generate answer using RAG"""
         # Search for relevant chunks
         results = self.search(query, top_k)
@@ -68,21 +74,15 @@ class RAGEngine:
         if not results:
             return {
                 'answer': 'No relevant information found in the documents.',
-                'sources': []
+                'sources': [],
+                'num_sources': 0
             }
         
         # Build context from results
         context = "\n\n".join([r['content'] for r in results])
         
-        # Create prompt
-        prompt = f"""Based on the following context, answer the question.
-
-Context:
-{context}
-
-Question: {query}
-
-Answer:"""
+        # Create prompt using template manager
+        prompt = self.create_prompt(query, context, template_type)
         
         # Generate answer using Ollama
         try:

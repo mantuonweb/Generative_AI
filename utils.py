@@ -1,32 +1,65 @@
-from PyPDF2 import PdfReader
 import io
+from PyPDF2 import PdfReader
+from typing import List
 
-CHUNK_SIZE = 500
-CHUNK_OVERLAP = 50
+class TemplateManager:
+    """Simple template manager for RAG prompts"""
+    
+    # Prompt Templates
+    DEFAULT = """Based on the following context, answer the question.
 
-def extract_text_from_pdf(pdf_file):
-    """Extract text from PDF"""
+Context:
+{context}
+
+Question: {query}
+
+Answer:"""
+    
+    DETAILED = """You are a helpful assistant. Use the following context to answer the question in detail.
+
+Context:
+{context}
+
+Question: {query}
+
+Provide a comprehensive answer:"""
+    
+    CONCISE = """Answer briefly using only the context provided.
+
+Context:
+{context}
+
+Question: {query}
+
+Brief Answer:"""
+    
+    @staticmethod
+    def get(template_type: str = "default") -> str:
+        """Get template by type"""
+        templates = {
+            "default": TemplateManager.DEFAULT,
+            "detailed": TemplateManager.DETAILED,
+            "concise": TemplateManager.CONCISE
+        }
+        return templates.get(template_type, TemplateManager.DEFAULT)
+
+
+def process_pdf_file(pdf_content: bytes, chunk_size: int = 500) -> List[str]:
+    """Process PDF file and extract text chunks"""
+    pdf_file = io.BytesIO(pdf_content)
     pdf_reader = PdfReader(pdf_file)
+    
+    # Extract text from all pages
     text = ""
     for page in pdf_reader.pages:
         text += page.extract_text()
-    return text
-
-def create_chunks(text, chunk_size=CHUNK_SIZE, chunk_overlap=CHUNK_OVERLAP):
-    """Split text into chunks"""
+    
+    # Split into chunks
     chunks = []
-    start = 0
-    while start < len(text):
-        end = start + chunk_size
-        chunk = text[start:end]
-        if chunk.strip():
-            chunks.append(chunk)
-        start += chunk_size - chunk_overlap
-    return chunks
-
-def process_pdf_file(pdf_content):
-    """Process PDF content and return chunks"""
-    pdf_file = io.BytesIO(pdf_content)
-    text = extract_text_from_pdf(pdf_file)
-    chunks = create_chunks(text)
+    words = text.split()
+    
+    for i in range(0, len(words), chunk_size):
+        chunk = " ".join(words[i:i + chunk_size])
+        chunks.append(chunk)
+    
     return chunks

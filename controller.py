@@ -11,16 +11,7 @@ class RAGController:
         self.rag.load_state()
     
     def upload_pdf(self, pdf_content: bytes, filename: str) -> Dict[str, Any]:
-        """
-        Process and store PDF content
-        
-        Args:
-            pdf_content: Raw PDF file content
-            filename: Name of the PDF file
-            
-        Returns:
-            Dictionary with upload results
-        """
+        """Process and store PDF content"""
         # Validate file extension
         if not filename.endswith('.pdf'):
             raise ValueError("Only PDF files are allowed")
@@ -43,30 +34,16 @@ class RAGController:
             "total_chunks": len(self.rag.chunks)
         }
     
-    def query_documents(self, query: str, top_k: int = 3) -> Dict[str, Any]:
-        """
-        Query the RAG system
-        
-        Args:
-            query: Search query
-            top_k: Number of top results to retrieve
-            
-        Returns:
-            Dictionary with query results
-        """
+    def query_documents(self, query: str, top_k: int = 3, template_type: str = "default") -> Dict[str, Any]:
+        """Query the RAG system"""
         if len(self.rag.chunks) == 0:
             raise ValueError("No documents uploaded yet")
         
-        result = self.rag.generate_answer(query, top_k)
+        result = self.rag.generate_answer(query, top_k, template_type)
         return result
     
     def get_stats(self) -> Dict[str, Any]:
-        """
-        Get statistics about the RAG system
-        
-        Returns:
-            Dictionary with system statistics
-        """
+        """Get statistics about the RAG system"""
         return {
             "total_chunks": len(self.rag.chunks),
             "total_documents": len(set([m['filename'] for m in self.rag.metadata])),
@@ -74,12 +51,7 @@ class RAGController:
         }
     
     def clear_all(self) -> Dict[str, str]:
-        """
-        Clear all data from the system
-        
-        Returns:
-            Confirmation message
-        """
+        """Clear all data from the system"""
         self.rag.clear()
         return {"message": "All data cleared"}
     
