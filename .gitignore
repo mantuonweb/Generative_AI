@@ -27,3 +27,6 @@ uploads/
 .env.local
 config.ini
 secrets.json
+.DS_Store
+__pycache__/*
+__pycache__/rag_engine.cpython-313.pyc

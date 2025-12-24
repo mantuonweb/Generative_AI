@@ -35,8 +35,8 @@ class RAGEngine:
         
         print(f"✅ Added chunk from: {filename} (Total chunks: {len(self.chunks)})")
     
-    def search(self, query: str, top_k: int = 3) -> List[Dict]:
-        """Search for relevant chunks based on query"""
+    def search(self, query: str, top_k: int = 3, filter_filenames: List[str] = None) -> List[Dict]:
+        """Search for relevant chunks based on query with optional filename filtering"""
         if not self.chunks:
             return []
         
@@ -44,13 +44,61 @@ class RAGEngine:
         query_embedding = self.embedding_model.encode([query])
         query_vector = np.array(query_embedding, dtype=np.float32)
         
+        # If filtering, search more results to ensure we get enough after filtering
+        search_k = top_k if not filter_filenames else min(len(self.chunks), top_k * 3)
+        
         # Search in FAISS
-        distances, indices = self.index.search(query_vector, min(top_k, len(self.chunks)))
+        distances, indices = self.index.search(query_vector, min(search_k, len(self.chunks)))
         
         results = []
         for i, idx in enumerate(indices[0]):
             if idx < len(self.chunks):
+                # Filter by filename if specified
+                if filter_filenames and self.metadata[idx]['filename'] not in filter_filenames:
+                    continue
+                
                 # Convert L2 distance to similarity score (0-1)
+                similarity = 1 / (1 + distances[0][i])
+                results.append({
+                    'id': self.metadata[idx]['id'],
+                    'filename': self.metadata[idx]['filename'],
+                    'content': self.chunks[idx],
+                    'score': float(similarity)
+                })
+                
+                # Stop when we have enough results
+                if len(results) >= top_k:
+                    break
+        
+        return results
+    
+    def search_with_id_filter(self, query: str, top_k: int = 3, filter_filenames: List[str] = None) -> List[Dict]:
+        """Search with FAISS ID filtering for better performance"""
+        if not self.chunks:
+            return []
+        
+        # Encode query
+        query_embedding = self.embedding_model.encode([query])
+        query_vector = np.array(query_embedding, dtype=np.float32)
+        
+        if filter_filenames:
+            # Create ID selector for filtering
+            valid_ids = [i for i, meta in enumerate(self.metadata) 
+                         if meta['filename'] in filter_filenames]
+        
+            if not valid_ids:
+                return []
+        
+            # Use IDSelectorBatch for filtering
+            id_selector = faiss.IDSelectorBatch(valid_ids)
+            params = faiss.SearchParametersIVF(sel=id_selector)
+            distances, indices = self.index.search(query_vector, top_k, params=params)
+        else:
+            distances, indices = self.index.search(query_vector, min(top_k, len(self.chunks)))
+        
+        results = []
+        for i, idx in enumerate(indices[0]):
+            if idx >= 0 and idx < len(self.chunks):
                 similarity = 1 / (1 + distances[0][i])
                 results.append({
                     'id': self.metadata[idx]['id'],
@@ -66,15 +114,17 @@ class RAGEngine:
         template = TemplateManager.get(template_type)
         return template.format(context=context, query=query)
     
-    def generate_answer(self, query: str, top_k: int = 3, template_type: str = "default") -> Dict:
-        """Generate answer using RAG"""
-        # Search for relevant chunks
-        results = self.search(query, top_k)
+    def generate_answer(self, query: str, top_k: int = 3, template_type: str = "default", filter_filenames: List[str] = None) -> Dict:
+        """Generate answer using RAG with optional document filtering"""
+        # Search for relevant chunks with optional filtering
+        results = self.search(query, top_k, filter_filenames=filter_filenames)
         
         if not results:
+            filter_msg = f" in documents: {', '.join(filter_filenames)}" if filter_filenames else ""
             return {
-                'answer': 'No relevant information found in the documents.',
+                'answer': f'No relevant information found{filter_msg}.',
                 'sources': [],
+                'filenames': [],
                 'num_sources': 0
             }
         
@@ -97,6 +147,7 @@ class RAGEngine:
         return {
             'answer': answer,
             'sources': [r['content'][:200] + '...' for r in results],
+            'filenames': list(set([r['filename'] for r in results])),
             'num_sources': len(results)
         }
     
