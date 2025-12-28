@@ -1,32 +1,76 @@
+# Python
 __pycache__/
 *.py[cod]
-.venv/
-.env
-*.log
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+pip-wheel-metadata/
+share/python-wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
 
-# RAG/ML specific
-*.pkl               # Pickle files (saved models)
-*.h5                # Keras models
-*.pt                # PyTorch models
-*.pth               # PyTorch checkpoints
-*.onnx              # ONNX models
-*.faiss             # FAISS index files
-vector_store/       # Vector database directory
-embeddings/         # Cached embeddings
-models/             # Downloaded models
+# Virtual Environment
+venv/
+env/
+ENV/
+env.bak/
+venv.bak/
 
-# Data files
-data/
-uploads/
-*.pdf               # If you don't want to commit PDFs
-*.csv
-*.json              # Unless it's config
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
 
-# API keys and secrets
+# Jupyter Notebook
+.ipynb_checkpoints
+*.ipynb_checkpoints/
+
+# Environment variables
 .env
 .env.local
-config.ini
-secrets.json
-.DS_Store
-__pycache__/*
-__pycache__/rag_engine.cpython-313.pyc
+.env.*.local
+
+# Logs
+*.log
+logs/
+
+# Database
+*.db
+*.sqlite
+*.sqlite3
+
+# PDF files (if you don't want to track uploaded PDFs)
+*.pdf
+
+# Model files and embeddings (can be large)
+*.bin
+*.pkl
+*.pickle
+embeddings/
+models/
+
+# Testing
+.pytest_cache/
+.coverage
+htmlcov/
+.tox/
+
+# OS
+Thumbs.db
